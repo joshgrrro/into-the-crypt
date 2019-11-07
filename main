@@ -1,0 +1,962 @@
+//macros
+@set getDMG @{
+    if Equals "Sword Strike"
+        v:Stats:"STR"
+        Calculate "-" mv:CurrentEnemy:"ARM" -> v:DMG
+    @elseif Equals "Blazing Strike"
+        mv:CurrentEnemy:"Weak"
+        getDictionaryValue Value "Fire" -> v:weak
+        number 3
+        Calculate "×" v:weak
+        Calculate "+" v:Stats:"STR"
+        Calculate "-" mv:CurrentEnemy:"ARM" -> v:DMG
+    @elseif Equals "Mighty Counter"
+        @:enemyAttack
+        text "true" -> v:VoidEnemyAttack
+        showResult "You strike back!"
+        v:Stats:"STR"
+        Calculate "+" 2
+        Calculate "-" mv:CurrentEnemy:"ARM" -> v:DMG
+    @elseif Equals "Etherblade"
+        v:Stats:"MAG"
+        Calculate "×" v:Stats:"CRIT"
+        Calculate "-" mv:CurrentEnemy:"RES" -> v:DMG
+        setVariable v:DMG
+    @elseif Equals "Knight's Wrath"
+        v:Stats:"STR"
+        Calculate "-" v:Stats:"ARM" -> v:DMG
+        if IsLessThan 1
+            number 1 -> v:DMG
+        end
+        v:Stats:"HP"
+        Calculate "-" v:DMG -> v:NewHP
+        v:Stats
+        setDictionaryValue "HP" v:NewHP -> v:Stats
+        showResult "You took \(v:DMG) damage!"
+        v:Stats:"STR"
+        Calculate "×" v:Stats:"CRIT"
+        Calculate "-" mv:CurrentEnemy:"ARM" -> v:DMG
+    @elseif Equals "Heroic Maneuver"
+        v:Stats:"STR"
+        Calculate "+" v:Stats:"DEX"
+        Calculate "-" mv:CurrentEnemy:"ARM"
+        Calculate "-" mv:CurrentEnemy:"ARM" -> v:DMG
+    @elseif Equals "Swift Stab"
+        v:Stats:"DEX"
+        Calculate "-" mv:CurrentEnemy:"ARM" -> v:DMG
+    @elseif Equals "Tricky Step"
+        v:Stats:"LUCK"
+        Calculate "+" 9 -> v:odds
+        randomNumber 0 20
+        if IsLessThan v:odds
+            showResult "...and you nailed it!"
+            v:Stats:"DEX"
+            Calculate "×" v:Stats:"CRIT"
+            Calculate "-" mv:CurrentEnemy:"ARM" -> v:DMG
+        else
+            showResult "...but it failed!"
+            number 0 -> v:DMG
+            text "true" -> v:VoidDmgMin
+        end
+    @elseif Equals "Longshot"
+        v:Stats:"LUCK"
+        Calculate "+" 1 -> v:odds
+        randomNumber 0 20
+        if IsLessThan v:odds
+            showResult "...and you nailed it!"
+            number 100 -> v:DMG
+        else
+            showResult "...but it failed!"
+            number 1 -> v:DMG
+        end
+    @elseif Equals "Rogue's Gambit"
+        v:Stats:"LUCK"
+        Calculate "+" 14 -> v:odds
+        randomNumber 0 20
+        if IsLessThan v:odds
+            showResult "...and you nailed it!"
+            v:Stats:"DEX"
+            Calculate "×" v:Stats:"CRIT" -> v:DMG
+        else
+            showResult "...but you hurt yourself instead!"
+            v:Stats:"DEX"
+            Calculate "-" v:Stats:"ARM" -> v:DMG
+            v:Stats:"HP"
+            Calculate "-" v:DMG -> v:NewHP
+            v:Stats
+            setDictionaryValue "HP" v:NewHP -> v:Stats
+            showResult "You took \(v:DMG) damage!"
+            number 0 -> v:DMG
+            text "true" -> v:VoidDmgMin
+        end
+    @elseif Equals "Deep Lunge"
+        v:Stats:"STR"
+        Calculate "×" v:Stats:"CRIT"
+        Calculate "-" mv:CurrentEnemy:"ARM" -> v:DMG
+    @elseif Equals "Ancient Fire"
+        mv:CurrentEnemy:"Weak"
+        getDictionaryValue Value "Fire" -> v:weak
+        v:Stats:"MAG"
+        Calculate "×" v:weak
+        Calculate "-" mv:CurrentEnemy:"RES" -> v:DMG
+    @elseif Equals "Eldest Fire"
+        mv:CurrentEnemy:"Weak"
+        getDictionaryValue Value "Fire" -> v:weak
+        v:Stats:"MAG"
+        Calculate "+" 3
+        Calculate "×" v:weak
+        Calculate "-" mv:CurrentEnemy:"RES" -> v:DMG
+    @elseif Equals "Hellfrost"
+        mv:CurrentEnemy:"Weak"
+        getDictionaryValue Value "Ice" -> v:weak
+        v:Stats:"MAG"
+        Calculate "×" v:weak
+        Calculate "-" mv:CurrentEnemy:"RES" -> v:DMG
+    @elseif Equals "Daemonfrost"
+        mv:CurrentEnemy:"Weak"
+        getDictionaryValue Value "Ice" -> v:weak
+        v:Stats:"MAG"
+        Calculate "+" 3
+        Calculate "×" v:weak
+        Calculate "-" mv:CurrentEnemy:"RES" -> v:DMG
+    @elseif Equals "Chant of the Vampire"
+        v:Stats:"MAG"
+        Calculate "-" mv:CurrentEnemy:"ARM"
+        Calculate "-" mv:CurrentEnemy:"RES" -> v:DMG
+        if IsGreaterThan 0
+            v:DMG
+            if IsGreaterThan v:EnemyHP
+                v:EnemyHP
+                setVariable v:DMG
+            end
+            v:Stats:"HP"
+            Calculate "+" v:DMG -> v:NewHP
+            v:Stats
+            setDictionaryValue "HP" v:NewHP -> v:Stats
+            showResult "You gained \(v:DMG) HP."
+        else
+            number 0 -> v:DMG
+            text "true" -> v:VoidDmgMin
+        end
+    @elseif Equals "Thorn"
+        mv:CurrentEnemy:"ARM"
+        Calculate "×" v:Stats:"CRIT"
+        setVariable v:DMG
+    @elseif Equals "Wizardsbane"
+        v:Stats:"MAG"
+        Calculate "+" v:Stats:"STR"
+        Calculate "-" mv:CurrentEnemy:"ARM"
+        Calculate "-" mv:CurrentEnemy:"RES" -> v:DMG
+    end
+}
+@set enemyAttack @{
+    //calculate enemy damage
+    mv:CurrentEnemy:"Class"
+    if Equals "Warrior"
+        mv:CurrentEnemy:"STR"
+        Calculate "-" v:Stats:"ARM" -> v:EnemyDMG
+    @elseif Equals "Thief"
+        mv:CurrentEnemy:"DEX"
+        Calculate "-" v:Stats:"ARM" -> v:EnemyDMG
+    @elseif Equals "Magician"
+        mv:CurrentEnemy:"MAG"
+        Calculate "-" v:Stats:"RES" -> v:EnemyDMG
+    end
+    //always do at least 1 damage
+    if IsLessThan 1
+        number 1 -> v:EnemyDMG
+    end
+    //apply damage
+    v:Stats:"HP"
+    setVariable v:OldHP
+    Calculate "-" v:EnemyDMG -> v:NewHP
+    v:Stats
+    setDictionaryValue "HP" v:NewHP -> v:Stats
+    showResult "\(mv:CurrentEnemy:"AttackText") You took \(v:EnemyDMG) damage!"
+    v:OldHP
+    if IsGreaterThan 5
+        v:NewHP
+        if IsLessThan 6
+            showResult "You're barely hanging on!"
+        end
+    end
+}
+@set Upgrade1 @{
+    v:Upgrade3
+    if Equals "false"
+        showResult "A tall, cloaked man stands waiting in the stairwell."
+        showResult "\"I've been watching you, \(v:Class).\""
+    else
+        showResult "Waiting in the stairwell is the tall, cloaked man."
+        showResult "\"Hello again, \(v:Class).\""
+    end
+    showResult "\"You are an exceptional fighter. Such savage drive to survive... it is admirable.\""
+    showResult "\"I wish to teach you one of the skills I've gathered here in the Crypt. Tell me, what would you like to learn?\""
+    v:Stats:"AttackList"
+    setVariable v:NewAttackList
+    v:Class
+    if Equals "Warrior"
+        Dictionary {
+            "A":["Etherblade" "Knight's Wrath"]
+            "B":["Etherblade" "Heroic Maneuver"]
+            "C":["Knight's Wrath" "Heroic Maneuver"]
+        } -> v:UpgradeList
+    @elseif Equals "Thief"
+        Dictionary {
+            "A":["Longshot" "Rogue's Gambit"]
+            "B":["Longshot" "Deep Lunge"]
+            "C":["Rogue's Gambit" "Deep Lunge"]
+        } -> v:UpgradeList
+    @elseif Equals "Magician"
+        Dictionary {
+            "A":["Chant of the Vampire" "Thorn"]
+            "B":["Chant of the Vampire" "Wizardsbane"]
+            "C":["Thorn" "Wizardsbane"]
+        } -> v:UpgradeList
+    end
+    List["A" "B" "C"]
+    getItemFromList RandomItem -> v:index
+    v:UpgradeList
+    getDictionaryValue Value v:index
+    chooseFromList "What will you learn?" -> v:newattack
+    addToVariable v:NewAttackList
+    v:Stats
+    setDictionaryValue "AttackList" v:NewAttackList -> v:Stats
+    showResult "\"A... fascinating choice. Focus, and receive my knowledge.\""
+    showResult "You learned \(v:newattack)!"
+    showResult "You continue down the staircase."
+    text "true" -> v:Upgrade1
+}
+
+@set Upgrade2 @{
+    showResult "Waiting in the stairwell is the tall, cloaked man."
+    showResult "\"Hello again, \(v:Class).\""
+    showResult "\"You're vigor for battle continually... surprises me.\""
+    showResult "\"I wish to teach you one more of the skills I've gathered in the Crypt. Tell me, what would you like to learn?\""
+    v:Stats:"AttackList"
+    setVariable v:NewAttackList
+    v:Class
+    if Equals "Warrior"
+        Dictionary {
+            "Heroic Maneuver":["Etherblade" "Knight's Wrath"]
+            "Knight's Wrath":["Etherblade" "Heroic Maneuver"]
+            "Etherblade":["Knight's Wrath" "Heroic Maneuver"]
+        } -> v:UpgradeList
+    @elseif Equals "Thief"
+        Dictionary {
+            "Deep Lunge":["Longshot" "Rogue's Gambit"]
+            "Rogue's Gambit":["Longshot" "Deep Lunge"]
+            "Longshot":["Rogue's Gambit" "Deep Lunge"]
+        } -> v:UpgradeList
+    @elseif Equals "Magician"
+        Dictionary {
+            "Wizardsbane":["Chant of the Vampire" "Thorn"]
+            "Thorn":["Chant of the Vampire" "Wizardsbane"]
+            "Chant of the Vampire":["Thorn" "Wizardsbane"]
+        } -> v:UpgradeList
+    end
+    v:Stats:"AttackList"
+    getItemFromList ItemAtIndex 3 -> v:index
+    v:UpgradeList
+    getDictionaryValue Value v:index
+    chooseFromList "What will you learn?" -> v:newattack
+    addToVariable v:NewAttackList
+    v:Stats
+    setDictionaryValue "AttackList" v:NewAttackList -> v:Stats
+    showResult "\"Really... you do intrigue me. Focus, and receive my knowledge.\""
+    showResult "You learned \(v:newattack)!"
+    showResult "You continue down the staircase."
+    text "true" -> v:Upgrade2
+}
+
+@set Upgrade3 @{
+    text "true" -> v:Upgrade3
+}
+
+@set menuFight "Attack"
+@set menuSneak "Sneak"
+@set menuSneakAttack "Sneak Attack"
+@set menuInvestigate "Investigate"
+@set menuExit "Next Floor"
+
+Comment "Setup the dictionaries for enemy stats"
+Dictionary {
+    "Name":"Skeleton"
+    "HP":3
+    "STR":1
+    "DEX":1
+    "MAG":0
+    "ARM":1
+    "RES":0
+    "Class":"Warrior"
+    "Weak": {"Fire":2 "Ice":1 "Holy":1}
+    "AttackText":"The Skeleton swings its rusty sword at you!"
+} -> mv:Skeleton
+Dictionary {
+    "Name":"Goblin"
+    "HP":3
+    "STR":0
+    "DEX":1
+    "MAG":0
+    "ARM":0
+    "RES":0
+    "Class":"Thief"
+    "Weak": {"Fire":1 "Ice":1 "Holy":1}
+    "AttackText":"The Goblin rakes you with its razor sharp claws!"
+} -> mv:Goblin
+Dictionary {
+    "Name":"Flesh-Eating Slug"
+    "HP":3
+    "STR":0
+    "DEX":1
+    "MAG":1
+    "ARM":0
+    "RES":1
+    "Class":"Magician"
+    "Weak": {"Fire":1 "Ice":2 "Holy":1}
+    "AttackText":"The Flesh-Eating Slug gnaws at you!"
+} -> mv:Slug
+Dictionary {
+    "Name":"Hobgoblin"
+    "HP":7
+    "STR":1
+    "DEX":2
+    "MAG":1
+    "ARM":1
+    "RES":0
+    "Class":"Thief"
+    "Weak": {"Fire":1 "Ice":1 "Holy":1}
+    "AttackText":"The Hobgoblin swipes at you with its shiv!"
+} -> mv:Hobgoblin
+Dictionary {
+    "Name":"Slime"
+    "HP":7
+    "STR":0
+    "DEX":1
+    "MAG":2
+    "ARM":0
+    "RES":1
+    "Class":"Magician"
+    "Weak": {"Fire":1 "Ice":2 "Holy":1}
+    "AttackText":"The Slime lunges at you!"
+} -> mv:Slime
+Dictionary {
+    "Name":"Night Orc"
+    "HP":7
+    "STR":2
+    "DEX":1
+    "MAG":0
+    "ARM":1
+    "RES":0
+    "Class":"Warrior"
+    "Weak": {"Fire":1 "Ice":1 "Holy":1}
+    "AttackText":"The Night Orc swings its heavy blade at you!"
+} -> mv:NightOrc
+Dictionary {
+    "Name":"Dark Wizard"
+    "HP":7
+    "STR":0
+    "DEX":2
+    "MAG":3
+    "ARM":1
+    "RES":2
+    "Class":"Magician"
+    "Weak": {"Fire":1 "Ice":1 "Holy":2}
+    "AttackText":"The Dark Wizard mutters an ancient, evil spell."
+} -> mv:DarkWizard
+Dictionary {
+    "Name":"Minotaur"
+    "HP":7
+    "STR":3
+    "DEX":2
+    "MAG":0
+    "ARM":2
+    "RES":1
+    "Class":"Warrior"
+    "Weak": {"Fire":1 "Ice":1 "Holy":1}
+    "AttackText":"The Minotaur stabs at you with its forked spear."
+} -> mv:Minotaur
+Dictionary {
+    "Name":"Shadow Elf"
+    "HP":7
+    "STR":0
+    "DEX":3
+    "MAG":0
+    "ARM":2
+    "RES":2
+    "Class":"Thief"
+    "Weak": {"Fire":2 "Ice":1 "Holy":1}
+    "AttackText":"The Shadow Elf launches an arrow at you from the darkness!"
+} -> mv:ShadowElf
+Dictionary {
+    "Name":"Fire Sprite"
+    "HP":10
+    "STR":0
+    "DEX":3
+    "MAG":5
+    "ARM":2
+    "RES":3
+    "Class":"Magician"
+    "Weak": {"Fire":0.5 "Ice":2 "Holy":1}
+    "AttackText":"The Fire Sprite shoots a jet of flame at you!"
+} -> mv:FireSprite
+Dictionary {
+    "Name":"Ice Pixie"
+    "HP":10
+    "STR":0
+    "DEX":3
+    "MAG":5
+    "ARM":2
+    "RES":3
+    "Class":"Magician"
+    "Weak": {"Fire":2 "Ice":0.5 "Holy":1}
+    "AttackText":"The Ice Pixie buffets you with an icy blast!"
+} -> mv:IcePixie
+Dictionary {
+    "Name":"Void Halfling"
+    "HP":10
+    "STR":0
+    "DEX":5
+    "MAG":0
+    "ARM":3
+    "RES":3
+    "Class":"Thief"
+    "Weak": {"Fire":1 "Ice":1 "Holy":1}
+    "AttackText":"The Void Halfling draws from its pipe and winks at you!"
+} -> mv:VoidHalfling
+Dictionary {
+    "Name":"Demon Soldier"
+    "HP":10
+    "STR":5
+    "DEX":3
+    "MAG":0
+    "ARM":3
+    "RES":2
+    "Class":"Warrior"
+    "Weak": {"Fire":1 "Ice":1 "Holy":2}
+    "AttackText":"The Demon Soldier slashes at you with its twin blades!"
+} -> mv:DemonSoldier
+Dictionary {
+    "Skeleton":mv:Skeleton
+    "Goblin":mv:Goblin
+    "Slug":mv:Slug
+    "Hobgoblin":mv:Hobgoblin
+    "Slime":mv:Slime
+    "Night Orc":mv:NightOrc
+    "Dark Wizard":mv:DarkWizard
+    "Minotaur":mv:Minotaur
+    "Shadow Elf":mv:ShadowElf
+    "Fire Sprite":mv:FireSprite
+    "Ice Pixie":mv:IcePixie
+    "Void Halfling":mv:VoidHalfling
+    "Demon Soldier":mv:DemonSoldier
+} -> v:EnemyStats
+
+Comment "Attack text"
+Dictionary {
+    "Sword Strike":"You swing your mighty sword!"
+    "Blazing Strike":"You swing your flaming sword!"
+    "Mighty Counter":"You wait to strike..."
+    "Etherblade":"Your blade glows with an arcane light. You swing your sword!"
+    "Knight's Wrath":"You attack with a furious rage!"
+    "Heroic Maneuver":"You execute a daring parry!"
+    "Swift Stab":"Your blade flashes!"
+    "Tricky Step":"You attempt a difficult dodge and strike..."
+    "Longshot":"You go in for the kill..."
+    "Rogue's Gambit":"You attempt a risky maneuver..."
+    "Deep Lunge":"You thrust your blade with all your might!"
+    "Ancient Fire":"You conjure a searing flame!"
+    "Eldest Fire":"You conjure a searing flame!"
+    "Hellfrost":"You summon a chilling frost from beyond!"
+    "Daemonfrost":"You summon a chilling frost from beyond!"
+    "Chant of the Vampire":"You utter the forbidden curse..."
+    "Thorn":"Your staff flashes. An eerie light surrounds the enemy!"
+    "Wizardsbane":"You grip your staff. Smoke pours from it. You swing it violently!"
+    "Sneak Attack":"You strike from the shadows!"
+} -> v:AttackText
+
+Comment "Item flavor text"
+Dictionary {
+    "Stone" : "You found a smooth stone! It's worthless."
+    "Bread" : "You found a piece of stale bread! (Gained 1 HP)"
+    "Cheese" : "You found a morsel of cheese! (Gained 1 HP)"
+    "Potion" : "You found a Potion! (Gained 5 HP)"
+    "Codex" : "You found an Arcane Codex! (Gained 1 Magic)"
+    "Crystal" : "You found a Crystal Ball! (Gained 2 Magic)"
+    "Herb" : "You found a Thieve's Thistle! (Gained 1 Dexterity)"
+    "Vial" : "You found a Vial of Secrecy! (Gained 2 Dexterity)"
+    "Whetstone" : "You found a Whetstone! (Gained 1 Strength)"
+    "Totem" : "You found a Totem of Power! (Gained 2 Strength)"
+    "Helm" : "You found a Warrior's Helm! (Gained 1 Armor)"
+    "Chestplate" : "You found a Hero's Chestplate! (Gained 2 Armor)"
+    "Shawl" : "You found a Mystic Shawl! (Gained 1 Resistance)"
+    "Salve" : "You found a Warding Salve! (Gained 2 Resistance)"
+    "Clover" : "You found a Four-Leaf Clover! (Gained 1 Luck)"
+    "RabbitsFoot" : "You found a Rabbit's Foot! (Gained 2 Luck)"
+} -> v:FlavorText
+
+Comment "Item functions"
+Dictionary {
+    "Stone" : {"Stat":"HP" "Value":0}
+    "Bread" : {"Stat":"HP" "Value":1}
+    "Cheese" : {"Stat":"HP" "Value":1}
+    "Potion" : {"Stat":"HP" "Value":5}
+    "Codex" : {"Stat":"MAG" "Value":1}
+    "Crystal" : {"Stat":"MAG" "Value":2}
+    "Herb" : {"Stat":"DEX" "Value":1}
+    "Vial" : {"Stat":"DEX" "Value":2}
+    "Whetstone" : {"Stat":"STR" "Value":1}
+    "Totem" : {"Stat":"STR" "Value":2}
+    "Helm" : {"Stat":"ARM" "Value":1}
+    "Chestplate" : {"Stat":"ARM" "Value":2}
+    "Shawl" : {"Stat":"RES" "Value":1}
+    "Salve" : {"Stat":"RES" "Value":2}
+    "Clover" : {"Stat":"LUCK" "Value":1}
+    "RabbitsFoot" : {"Stat":"LUCK" "Value":2}
+} -> v:ItemData
+
+Comment "Difficulties / Rarity"
+Dictionary {
+    "Easy" : {
+        "Event" : ["Enemy"]
+        "Enemy" : ["Skeleton" "Skeleton" "Goblin" "Goblin" "Slug" "Slug" "Night Orc" "Hobgoblin" "Slime"]
+        "Item" : ["Stone" "Stone" "Bread" "Bread" "Cheese" "Cheese" "Potion" "Codex" "Herb" "Whetstone"]
+    }
+    "Normal" : {
+        "Event" : ["Enemy" "Enemy" "Enemy" "Enemy" "Ambush"]
+        "Enemy" : ["Skeleton" "Goblin" "Slug" "Hobgoblin" "Hobgoblin" "Hobgoblin" "Slime" "Slime" "Slime" "Night Orc" "Night Orc" "Night Orc"]
+        "Item" : ["Stone" "Bread" "Bread" "Cheese" "Potion" "Codex" "Herb" "Whetstone" "Helm" "Shawl" "Clover"]
+    }
+    "Hard" : {
+        "Event" : ["Enemy" "Enemy" "Enemy" "Enemy" "Enemy" "Enemy" "Enemy" "Ambush" "Ambush" "Ambush"]
+        "Enemy" : ["Hobgoblin" "Slime" "Night Orc" "Dark Wizard" "Dark Wizard" "Minotaur" "Minotaur" "Shadow Elf" "Shadow Elf"]
+        "Item" : ["Bread" "Cheese" "Potion" "Potion" "Potion" "Codex" "Codex" "Herb" "Herb" "Whetstone" "Whetstone" "Helm" "Helm" "Shawl" "Shawl" "Clover" "Clover" "Crystal" "Vial" "Totem" "Chestplate" "Salve" "RabbitsFoot"]
+    }
+    "Harder" : {
+        "Event" : ["Enemy" "Enemy" "Enemy" "Ambush" "Ambush"]
+        "Enemy" : ["Dark Wizard" "Dark Wizard" "Minotaur" "Minotaur" "Shadow Elf" "Shadow Elf" "Fire Sprite" "Ice Pixie" "Void Halfling" "Void Halfling" "Demon Soldier" "Demon Soldier"]
+        "Item" : ["Cheese" "Potion" "Potion" "Potion" "Potion" "Codex" "Herb" "Whetstone" "Helm" "Shawl" "Clover" "Crystal" "Crystal" "Vial" "Vial" "Totem" "Totem" "Chestplate" "Chestplate" "Salve" "Salve" "RabbitsFoot" "RabbitsFoot"]
+    }
+    "Final" : {
+        "Event" : ["Enemy" "Ambush" "Ambush" "Ambush" "Ambush"]
+        "Enemy" : ["Fire Sprite" "Ice Pixie" "Void Halfling" "Void Halfling" "Demon Soldier" "Demon Soldier"]
+        "Item" : ["Potion" "Potion" "Potion" "Potion" "Potion" "Crystal" "Vial" "Totem" "Chestplate" "Salve" "RabbitsFoot" "Crystal" "Vial" "Totem" "Chestplate" "Salve" "RabbitsFoot" "Crystal" "Vial" "Totem" "Chestplate" "Salve" "RabbitsFoot"]
+    }
+} -> v:DropRates
+
+Comment "Intro"
+showResult "You examine the narrow stone archway leading into the darkness. From behind you comes a voice."
+showResult "\"You want to stay out of there,\" the voice growls."
+showResult "You turn around to find a decrepit grave keeper leaning heavily on a rusty shovel and shielding his face from the heavy rain with his free hand."
+showResult "\"Something terrible,\" he rasps, \"haunts that Crypt. ...You'd better at least have a weapon.\""
+List ["I have a sword.","I have a dagger.","I have a staff."]
+chooseFromList "How do you respond?"
+if Equals "I have a sword."
+    text "Warrior" -> v:Class
+@elseif Equals "I have a dagger."
+    text "Thief" -> v:Class
+@elseif Equals "I have a staff."
+    text "Magician" -> v:Class
+end
+v:Class
+if Equals "Warrior"
+    showResult "\"Oh a mighty warrior eh? A hero of great renown? Ugh. A fool, that's what you are. Beware the sound of steel and bone! If you hear it drawing near... run.\""
+@elseif Equals "Thief"
+    showResult "\"Ugh. Good for nothin' thief. I oughta kill you where you stand! But the Crypt will handle that, won't it? Mark my words, when you hear the sound of steel and bone creeping up in the darkness, your time is up.\""
+@elseif Equals "Magician"
+    showResult "\"Oh a magician are you? A great scholar no doubt. Your books and ancient gibberish won't be enough to save you in there. Mind the sound of steel and bone, stalking you in the dark. Flee, if you care for breathin'.\""
+end
+showResult "He spits scornfully on the cobbled pathway, turns, and hobbles away. You look back to the grim archway."
+chooseFromMenu "Dare you enter?" ["Into the Crypt!", "I dare not..."]
+    case
+        showResult "Step by step, you descend into the darkness."
+    case
+        showResult "A shiver runs down your spine. Swallowing your pride, you follow after the grave keeper."
+        exitShortcut
+end
+
+Comment "Define the stats for each class"
+v:Class
+if Equals "Warrior"
+    Dictionary {
+        "HP":15
+        "STR":3
+        "DEX":1
+        "MAG":0
+        "ARM":1
+        "RES":1
+        "CRIT":2
+        "LUCK":0
+        "AttackList":["Sword Strike" "Mighty Counter"]
+    } -> v:Stats
+end
+v:Class
+if Equals "Thief"
+    Dictionary {
+        "HP":15
+        "STR":0
+        "DEX":3
+        "MAG":0
+        "ARM":0
+        "RES":0
+        "CRIT":2
+        "LUCK":1
+        "AttackList":["Swift Stab" "Tricky Step"]
+    } -> v:Stats
+end
+v:Class
+if Equals "Magician"
+    Dictionary {
+        "HP":15
+        "STR":0
+        "DEX":1
+        "MAG":3
+        "ARM":0
+        "RES":1
+        "CRIT":2
+        "LUCK":0
+        "AttackList":["Ancient Fire" "Hellfrost"]
+    } -> v:Stats
+end
+
+Comment "Initiate the game"
+number 1 -> v:Level
+number 8 -> v:Turn
+number 15 -> v:Floors
+Calculate "÷" 5
+roundNumber LeftOfDecimal Normal -> v:NormalFloor
+Calculate "+" v:NormalFloor -> v:HardFloor
+Calculate "+" v:NormalFloor -> v:HarderFloor
+Calculate "+" v:NormalFloor -> v:FinalFloor
+text "false" -> v:Dead
+text "Easy" -> v:Difficulty
+number 0 -> v:KillCount
+number 0 -> v:ItemCount
+text "false" -> v:Upgrade1
+text "false" -> v:Upgrade2
+text "false" -> v:Upgrade3
+
+repeat v:Floors
+    Comment "Determine the difficulty of the floor"
+    v:Level
+    if IsGreaterThan v:FinalFloor
+        v:Difficulty
+        if Equals "Harder"
+            showResult "The air in the Crypt is thick with a sickening darkness down here."
+        end
+        text "Final" -> v:Difficulty
+    @elseif IsGreaterThan v:HarderFloor
+        v:Difficulty
+        if Equals "Hard"
+            showResult "The walls of the Crypt down here seem to have the chill of death."
+        end
+        text "Harder" -> v:Difficulty
+    @elseif IsGreaterThan v:HardFloor
+        v:Difficulty
+        if Equals "Normal"
+            showResult "The odor of the Crypt is stronger down here."
+        end
+        text "Hard" -> v:Difficulty
+    @elseif IsGreaterThan v:NormalFloor
+        v:Difficulty
+        if Equals "Easy"
+            showResult "The Crypt seems to be even darker down here."
+        end
+        text "Normal" -> v:Difficulty
+    end
+    
+    Comment "Set up scenario for new room"
+    v:DropRates
+    getDictionaryValue Value v:Difficulty -> mv:RoomRates
+    mv:RoomRates:"Event"
+    getItemFromList RandomItem -> v:Event
+    List ["a twisting corridor" "a narrow passageway" "a vast banquet hall" "a small room" "a musty dungeon cell" "a dingy barrack"]
+    getItemFromList RandomItem -> v:Setting
+    mv:RoomRates:"Enemy"
+    getItemFromList RandomItem -> v:Enemy
+    List ["Chest" "Box" "Decorative Urn" "Pile of Books" "Strange Device" "Peculiar Shield" "Mysterious Marking"]
+    getItemFromList RandomItem -> v:Interest
+    List ["sitting in the corner" "by the exit" "on a shelf" "leaned against the far wall" "shoved under a table" "tucked in an alcove" "on a pedestal" "just to your left" "under some rubble"]
+    getItemFromList RandomItem -> v:Location
+    mv:RoomRates:"Item"
+    getItemFromList RandomItem -> v:Item
+    v:EnemyStats
+    getDictionaryValue Value v:Enemy -> mv:CurrentEnemy
+    getDictionaryValue Value "HP" -> v:EnemyHP
+    
+    Comment "Prompt scenario to player"
+    text "Choose" -> v:State
+    v:Event
+    if Equals "Enemy"
+        showResult "You enter into \(v:Setting). A \(mv:CurrentEnemy:"Name") lurks on the other end of the room."
+    @elseif Equals "Ambush"
+        showResult "You enter into \(v:Setting). A \(mv:CurrentEnemy:"Name") is coming right at you!"
+        text "Fight" -> v:State
+    end
+    
+    Comment "Cycle through turns"
+    text "false" -> v:HasInvestigated
+    text "false" -> v:KilledEnemy
+    text "false" -> v:SnuckPast
+    repeat v:Turn
+        text "false" -> v:SneakAttack
+        text "false" -> v:VoidEnemyAttack
+        text "false" -> v:VoidDmgMin
+        v:State
+        if Equals "End"
+            Nothing
+        @elseif Equals "Choose"
+            List [] -> v:Options
+            v:KilledEnemy
+            if Equals "false"
+                v:SnuckPast
+                if Equals "false"
+                    List [@:menuFight, @:menuSneak]
+                    addToVariable v:Options
+                else
+                    List [@:menuSneakAttack]
+                    addToVariable v:Options
+                    v:HasInvestigated
+                    if Equals "false"
+                        List [@:menuInvestigate]
+                        addToVariable v:Options
+                    end
+                end
+            else
+                v:HasInvestigated
+                if Equals "false"
+                    List [@:menuInvestigate]
+                    addToVariable v:Options
+                end
+            end
+            List [@:menuExit]
+            addToVariable v:Options
+            chooseFromList "What will you do?" -> mv:Choice
+            if Equals @:menuFight
+                text "Fight" -> v:State
+            @elseif Equals @:menuSneak
+                text "Sneak" -> v:State
+            @elseif Equals @:menuSneakAttack
+                text "Fight" -> v:State
+                text "true" -> v:SneakAttack
+            @elseif Equals @:menuInvestigate
+                text "Investigate" -> v:State
+            @elseif Equals @:menuExit
+                text "Exit" -> v:State
+            end
+        end
+        v:State
+        if Equals "Fight"
+            v:SneakAttack
+            if Equals "true"
+                showResult v:AttackText:"Sneak Attack"
+                v:Class
+                if Equals "Warrior"
+                    v:Stats:"STR"
+                    Calculate "×" v:Stats:"CRIT" 
+                    Calculate "-" mv:CurrentEnemy:"ARM" -> v:DMG
+                @elseif Equals "Thief"
+                    v:Stats:"DEX"
+                    Calculate "×" v:Stats:"CRIT" 
+                    Calculate "-" mv:CurrentEnemy:"ARM" -> v:DMG
+                @elseif Equals "Magician"
+                    v:Stats:"MAG"
+                    Calculate "×" v:Stats:"CRIT" 
+                    Calculate "-" mv:CurrentEnemy:"RES" -> v:DMG
+                end
+            else
+                v:Stats:"AttackList"
+                chooseFromList "Which attack?" -> v:Attack
+                v:AttackText
+                getDictionaryValue Value v:Attack
+                showResult
+                v:Attack
+                @:getDMG
+            end
+            //always do at least 1 damage
+            v:VoidDmgMin
+            if Equals "false"
+                v:DMG
+                if IsLessThan 1
+                    number 1 -> v:DMG
+                end
+            end
+            //apply damage
+            v:EnemyHP
+            Calculate "-" v:DMG -> v:EnemyHP
+            showResult "The \(mv:CurrentEnemy:"Name") took \(v:DMG) damage!"
+            v:EnemyHP
+            if IsLessThan 1
+                //killed enemy
+                showResult "You defeated the \(mv:CurrentEnemy:"Name")!"
+                v:HasInvestigated
+                if Equals "false"
+                    showResult "Looking around, you see a \(v:Interest) \(v:Location)."
+                end
+                text "Choose" -> v:State
+                text "true" -> v:KilledEnemy
+                v:KillCount
+                Calculate "+" 1 -> v:KillCount
+            else
+                v:VoidEnemyAttack
+                if Equals "false"
+                    @:enemyAttack
+                end
+            end
+        @elseif Equals "Sneak"
+            showResult "You creep slowly through the darkness..."
+            mv:CurrentEnemy
+            getDictionaryValue Value "DEX"
+            Calculate "+" v:Stats:DEX -> mv:DEXroll
+            randomNumber 0 mv:DEXroll
+            if IsLessThan v:Stats:DEX
+                //successful sneak
+                showResult "You snuck past the enemy!"
+                text "true" -> v:SnuckPast
+                text "Choose" -> v:State
+                showResult "Looking around, you see a \(v:Interest) \(v:Location)."
+            else
+                //failed sneak
+                showResult "The \(mv:CurrentEnemy:"Name") spotted you!"
+                text "Fight" -> v:State
+                @:enemyAttack
+            end
+        @elseif Equals "Investigate"
+            showResult "You inspect the \(v:Interest)..."
+            //get item effects
+            v:ItemData
+            getDictionaryValue Value v:Item -> v:ItemInfo
+            v:ItemInfo:"Stat"
+            setVariable v:ItemStat
+            v:ItemInfo:"Value"
+            setVariable v:ItemValue
+            //calculate new value
+            v:Stats
+            getDictionaryValue Value v:ItemStat -> v:OldValue
+            Calculate "+" v:ItemValue -> v:NewValue
+            //show flavor text
+            v:FlavorText
+            getDictionaryValue Value v:Item
+            showResult
+            //write to stats
+            v:Stats
+            setDictionaryValue v:ItemStat v:NewValue -> v:Stats
+            //reset turn menu
+            text "Choose" -> v:State
+            text "true" -> v:HasInvestigated
+            v:ItemCount
+            Calculate "+" 1 -> v:ItemCount
+        @elseif Equals "Exit"
+            showResult "You head toward the door..."
+            text "true" -> v:ExitSuccess
+            v:KilledEnemy
+            if Equals "false"
+                v:SnuckPast
+                if Equals "false"
+                    v:Stats:"LUCK"
+                    Calculate "+" 1  -> v:odds
+                    randomNumber 0 20
+                    if IsGreaterThan v:odds
+                        showResult "...but you ran right into the \(mv:CurrentEnemy:"Name")!"
+                        text "Fight" -> v:State
+                        @:enemyAttack
+                        text "false" -> v:ExitSuccess
+                    else
+                        showResult "...creep quietly past the \(mv:CurrentEnemy:"Name")..."
+                    end
+                end
+            end
+            v:ExitSuccess
+            if Equals "true"
+                showResult "...and descend to floor \(Calculate ^(v:Level) "+" 1)"
+                text "End" -> v:State
+            end
+        end
+        //after this turn
+        v:State
+        if Equals "End"
+            Nothing
+        else
+            v:Turn
+            Calculate "-" 1 -> v:Turn
+            if Equals 1
+                showResult "The sound of steel and bone scrapes in the entryway!"
+            @elseif Equals 2
+                showResult "A bone-chilling scraping noise rings from the hall behind you!"
+            @elseif Equals 3
+                showResult "A terrible scraping noise sounds from the stairwell behind you."
+            @elseif Equals 5
+                showResult "A terrible noise comes from the floor above you."
+            @elseif Equals 7
+                showResult "The faint echo of some terrible noise drifts from the distance."
+            end
+        end
+        v:Stats:"HP"
+        if IsLessThan 1
+            v:Dead
+            if Equals "false"
+                //dead
+                showResult "You can't carry on..."
+                text "End" -> v:State
+                text "true" -> v:Dead
+            end
+        end
+    end
+    //after all turns
+    v:State
+    if Equals "End"
+        v:Level
+        Calculate "+" 1 -> v:Level
+        v:Turn
+        Calculate "+" 3 -> v:Turn
+    else
+        text "true" -> v:Dead
+    end
+    v:Dead
+    if Equals "true"
+        showResult "The horrifying sound of steel grating against bone swells and overtakes you."
+        showResult "A foul stench fills the room, and you are consumed by the darkness."
+        exitShortcut
+    end
+    //Upgrades
+    v:KillCount
+    if Equals 6
+        v:Upgrade1
+        if Equals "false"
+            @:Upgrade1
+        end
+    @elseif Equals 10
+        v:Upgrade2
+        if Equals "false"
+            @:Upgrade2
+        end
+    @elseif ^(v:ItemCount) Equals 8
+        v:Upgrade3
+        if Equals "false"
+            @:Upgrade3
+        end
+    end
+end
+showResult "The Crypt is too dark to even see down here."
+chooseFromMenu "What will you do?" [@:menuInvestigate @:menuExit]
+    case
+        showResult "You fumble around the room."
+    case
+        showResult "You move blindly through the darkness."
+end
+showResult "\"Well, well, well...\" comes a familiar voice from behind you. \"I have to admit, when I met you on the surface I didn't believe you had it in you. But here you are.\""
+showResult "You turn around and see the grave keeper's face, gruesome and rotting, peering at you over a dying candle."
+showResult "He draws closer. You can't move."
+showResult "\"I did warn you.\""
+showResult "There is a sharp, steely pain in your gut, and you collapse to the floor."
+showResult "\"Steel and bone, steel and bone...\" hums the grave keeper. \"You fool. Don't you know all you'll find in a Crypt... is death?\" Slowly, he raises his shovel above your blanching face."
+exitShortcut
+
+Comment
+| Into the Crypt v0.8.1
+| by Josh Guerrero
+Comment
+| Thank you for downloading.
+|
+| 
+| If you don't want spoilers, don't scroll up!
